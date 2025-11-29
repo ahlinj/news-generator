@@ -22,12 +22,12 @@ for page in range(1, MAX_PAGE + 1):
         # get a link inside the h3
         a = h3.find("a")
         if a and a.get("href"):
-            all_articles.append({
+            all_articles_t4eu.append({
                 "title": a.get_text(strip=True),
                 "link": a["href"]
             })
 
-print("\nTotal articles collected:", len(all_articles_t4eu))
-
 for article in all_articles_t4eu:
     print(article)
+
+print("\nTotal articles collected:", len(all_articles_t4eu))
