@@ -5,7 +5,7 @@ from bs4 import BeautifulSoup
 BASE_URL = "https://transform4europe.eu/news/"
 MAX_PAGE = 62
 
-all_articles = []
+all_articles_t4eu = []
 
 for page in range(1, MAX_PAGE + 1):
     # Construct page URL
@@ -27,16 +27,7 @@ for page in range(1, MAX_PAGE + 1):
                 "link": a["href"]
             })
 
-print("\nTotal articles collected:", len(all_articles))
+print("\nTotal articles collected:", len(all_articles_t4eu))
 
-for article in all_articles:
+for article in all_articles_t4eu:
     print(article)
-
-# upr
-
-#url2="https://www.upr.si/si/o-univerzi/t4eu-/t4eu-novice/pomlad-trajnostnega-razvoja-"
-
-#response2 = requests.get(url2)
-
-#print(response2.text)
-
