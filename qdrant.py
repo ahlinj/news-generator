@@ -10,7 +10,7 @@ client = QdrantClient(host="localhost", port=6333)
 
 model = SentenceTransformer("sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2")
 
-COLLECTION_NAME = "news_articles_1"
+COLLECTION_NAME = "news_articles_2"
 VECTOR_SIZE = 384
 
 def ensure_collection():
@@ -38,10 +38,10 @@ def chunk_text(text, chunk_size=150, overlap=50):
 
 def insert_article(article):
     chunks = chunk_text(article["content"])
-    embeddings = model.encode(chunks)
-
+    vectors = model.encode(chunks)
+    
     points = []
-    for chunk, vector in zip(chunks, embeddings):
+    for i, (chunk, vector) in enumerate(zip(chunks, vectors)):
         points.append(
             PointStruct(
                 id=str(uuid.uuid4()),
@@ -49,6 +49,7 @@ def insert_article(article):
                 payload={
                     "title": article["title"],
                     "text": chunk,
+                    "chunk_id": i,
                     "link": article["link"]
                 }
             )
