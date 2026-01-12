@@ -1,10 +1,14 @@
-from qdrant_client.models import VectorParams, Distance
+from qdrant_client.models import VectorParams, Distance, PointStruct
 from qdrant_client import QdrantClient
+from sentence_transformers import SentenceTransformer
+import uuid
 
 import parse_t4eu
 import parse_upr
 
 client = QdrantClient(host="localhost", port=6333)
+
+model = SentenceTransformer("sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2")
 
 COLLECTION_NAME = "news_articles_1"
 VECTOR_SIZE = 384
@@ -32,7 +36,32 @@ def chunk_text(text, chunk_size=150, overlap=50):
 
     return chunks
 
+def insert_article(article):
+    chunks = chunk_text(article["content"])
+    embeddings = model.encode(chunks)
+
+    points = []
+    for chunk, vector in zip(chunks, embeddings):
+        points.append(
+            PointStruct(
+                id=str(uuid.uuid4()),
+                vector=vector.tolist(),
+                payload={
+                    "title": article["title"],
+                    "text": chunk,
+                    "link": article["link"]
+                }
+            )
+        )
+
+    client.upsert(
+        collection_name=COLLECTION_NAME,
+        points=points
+    )
+
 def main():
+    ensure_collection()
+
     articles = (
         parse_t4eu.get_articles() +
         parse_upr.get_articles()
@@ -41,8 +70,8 @@ def main():
     print(f"Loaded {len(articles)} articles")
 
     for article in articles:
-        chunks = chunk_text(article["content"])
-        print(f"{article['title']} -> {len(chunks)} chunks")
+        insert_article(article)
+        print(f"Inserted article: {article['title']}")
 
 if __name__ == "__main__":
     main()
