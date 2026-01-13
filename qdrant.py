@@ -50,6 +50,7 @@ def insert_article(article):
                     "title": article["title"],
                     "text": chunk,
                     "chunk_id": i,
+                    "total_chunks": len(chunks),
                     "link": article["link"]
                 }
             )
