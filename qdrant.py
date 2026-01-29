@@ -45,7 +45,7 @@ def chunk_text(text, chunk_size=150, overlap=50):
 
     return chunks
 
-def insert_article(article):
+def insert_article(article, names):
     chunks = chunk_text(article["content"])
     vectors = model.encode(chunks)
     
@@ -65,10 +65,11 @@ def insert_article(article):
             )
         )
 
-    client.upsert(
-        collection_name=COLLECTION_NAME,
-        points=points
-    )
+    for name in names:
+        client.upsert(
+            collection_name=name,
+            points=points
+        )
 
 if __name__ == "__main__":
     update_weekly_collection()
@@ -76,12 +77,12 @@ if __name__ == "__main__":
     ensure_collection(WEEKLY_COLLECTION_NAME)
 
     articles = (
-        parse_t4eu.get_articles() +
+        parse_t4eu.get_articles() + 
         parse_upr.get_articles()
     )
 
     print(f"Loaded {len(articles)} articles")
 
     for article in articles:
-        insert_article(article)
+        insert_article(article, [COLLECTION_NAME, WEEKLY_COLLECTION_NAME])
         print(f"Inserted article: {article['title']}")

@@ -1,4 +1,5 @@
 import requests
+import json
 from bs4 import BeautifulSoup
 
 
@@ -20,6 +21,12 @@ def extract_content(url):
 
 def get_articles():
     articles = []
+    first = True
+
+    with open("logs.json") as f:
+        logs = json.load(f)
+    last_link = logs.get("last_t4eu_link")
+
 
     for page in range(1, MAX_PAGE + 1):
         # Construct page URL
@@ -36,10 +43,20 @@ def get_articles():
             # get a link inside the h3
             a = h3.find("a")
             if a and a.get("href"):
-                articles.append({
-                    "title": a.get_text(strip=True),
-                    "link": a["href"]
-                })
+                if last_link == a["href"]:
+                    for article in articles:
+                        article["content"] = extract_content(article["link"])
+                    return articles
+                else:
+                    if first:
+                        first = False
+                        logs["last_t4eu_link"] = a["href"]
+                        with open("logs.json", "w") as f:
+                            json.dump(logs, f)
+                    articles.append({
+                        "title": a.get_text(strip=True),
+                        "link": a["href"]
+                    })
 
     for article in articles:
         article["content"] = extract_content(article["link"])
