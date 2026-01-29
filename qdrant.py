@@ -1,6 +1,7 @@
 from qdrant_client.models import VectorParams, Distance, PointStruct
 from qdrant_client import QdrantClient
 from sentence_transformers import SentenceTransformer
+from datetime import datetime
 import uuid
 
 import parse_t4eu
@@ -11,15 +12,23 @@ client = QdrantClient(host="localhost", port=6333)
 model = SentenceTransformer("sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2")
 
 COLLECTION_NAME = "news_articles_2"
+BASE_WEEKLY_COLLECTION_NAME = "weekly_news_articles_"
+
 VECTOR_SIZE = 384
 
-def ensure_collection():
+def update_weekly_collection():
+    week_number = datetime.now().isocalendar()[1]
+    global WEEKLY_COLLECTION_NAME
+    WEEKLY_COLLECTION_NAME = BASE_WEEKLY_COLLECTION_NAME + str(week_number)
+
+
+def ensure_collection(name):
     collections = client.get_collections().collections
     names = [c.name for c in collections]
 
-    if COLLECTION_NAME not in names:
+    if name not in names:
         client.create_collection(
-            collection_name=COLLECTION_NAME,
+            collection_name=name,
             vectors_config=VectorParams(
                 size=VECTOR_SIZE,
                 distance=Distance.COSINE
@@ -61,8 +70,10 @@ def insert_article(article):
         points=points
     )
 
-def main():
-    ensure_collection()
+if __name__ == "__main__":
+    update_weekly_collection()
+    ensure_collection(COLLECTION_NAME)
+    ensure_collection(WEEKLY_COLLECTION_NAME)
 
     articles = (
         parse_t4eu.get_articles() +
@@ -74,6 +85,3 @@ def main():
     for article in articles:
         insert_article(article)
         print(f"Inserted article: {article['title']}")
-
-if __name__ == "__main__":
-    main()
