@@ -81,8 +81,5 @@ if __name__ == "__main__":
         parse_upr.get_articles()
     )
 
-    print(f"Loaded {len(articles)} articles")
-
     for article in articles:
         insert_article(article, [COLLECTION_NAME, WEEKLY_COLLECTION_NAME])
-        print(f"Inserted article: {article['title']}")

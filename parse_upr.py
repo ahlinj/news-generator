@@ -1,4 +1,5 @@
 import requests
+import json
 from bs4 import BeautifulSoup
 
 BASE_URL = "https://www.upr.si/si/o-univerzi/"
@@ -28,27 +29,65 @@ def get_articles():
         "t4eu-/arhiv-preteklih-priloznosti-t4eu-/p/2"
     ]
 
+    with open("logs.json") as f:
+        logs = json.load(f)
+        last_link_priloznosti_za_studente = logs.get("last_priloznosti_za_studente_link")
+        last_link_priloznosti_za_zaposlene = logs.get("last_priloznosti_za_zaposlene_link")
+        last_link_novice = logs.get("last_novice_link")
+
     for suffix in url_suffixes:
+        first = True
+
+        match suffix:
+            case "t4eu-/t4eu-priloznosti-/za-studente-/":
+                last_link = last_link_priloznosti_za_studente
+                json_key = "last_priloznosti_za_studente_link"
+            case "t4eu-/t4eu-priloznosti-/za-zaposlene/":
+                last_link = last_link_priloznosti_za_zaposlene
+                json_key = "last_priloznosti_za_zaposlene_link"
+            case "t4eu-novice/p/1":
+                last_link = last_link_novice
+                json_key = "last_novice_link"
+
         url = BASE_URL + suffix
         soup = BeautifulSoup(requests.get(url).text, "html.parser")
 
         for div in soup.find_all("div", class_="column-description P30 bg-2 resizable"):
-                a = div.find("a")
-                if a and a.get("href"):
-                    title = a.find("h5")
-                    link = a.get("href")
+            a = div.find("a")
+            if a and a.get("href"):
+                link = a.get("href")
 
-                    if link.startswith("/si/o-univerzi/"):
-                        link = "https://www.upr.si" + link
-                    else:
-                        link = "https://www.upr.si/si/o-univerzi/t4eu-novice/p/" + link
-                
+                if link.startswith("/si/o-univerzi/"):
+                    link = "https://www.upr.si" + link
+                else:
+                    link = "https://www.upr.si/si/o-univerzi/t4eu-novice/p/" + link
+
+                if last_link == link:
+                    if json_key == "last_novice_link":
+                        for article in articles:
+                            article["content"] = extract_content(article["link"])
+                        return articles
+                    stop_suffix = True
+                    break
+                else:
+                    if first:
+                        first = False
+                        logs[json_key] = link
+                        with open("logs.json", "w") as f:
+                            json.dump(logs, f)
                     articles.append({
-                        "title": title.get_text(strip=True),
+                        "title": a.find("h5").get_text(strip=True),
                         "link": link
                     })
+
+        if stop_suffix:
+            continue
 
     for article in articles:
         article["content"] = extract_content(article["link"])
 
     return articles
+
+
+if __name__ == "__main__":
+    get_articles()
