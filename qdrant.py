@@ -3,6 +3,7 @@ from qdrant_client import QdrantClient
 from sentence_transformers import SentenceTransformer
 from datetime import datetime
 import uuid
+import os
 
 import parse_t4eu
 import parse_upr
@@ -71,6 +72,23 @@ def insert_article(article, names):
             points=points
         )
 
+def create_dated_snapshot(collection_name: str,
+                          storage_path: str = "qdrant_data:/qdrant/storage"):
+
+    snapshot = client.create_snapshot(collection_name)
+
+    original_name = snapshot.name
+
+    today = datetime.now().strftime("%Y_%m_%d")
+    new_name = f"{collection_name}_{today}.snapshot"
+
+    old_path = os.path.join(storage_path, original_name)
+    new_path = os.path.join(storage_path, new_name)
+
+    os.rename(old_path, new_path)
+
+    return new_name
+
 if __name__ == "__main__":
     update_weekly_collection()
     ensure_collection(COLLECTION_NAME)
@@ -83,3 +101,6 @@ if __name__ == "__main__":
 
     for article in articles:
         insert_article(article, [COLLECTION_NAME, WEEKLY_COLLECTION_NAME])
+
+    create_dated_snapshot(COLLECTION_NAME)
+    create_dated_snapshot(WEEKLY_COLLECTION_NAME)
