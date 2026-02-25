@@ -10,7 +10,7 @@ import parse_upr
 
 client = QdrantClient(host="localhost", port=6333)
 
-model = SentenceTransformer("sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2")
+model = SentenceTransformer("sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2", device="cpu")
 
 COLLECTION_NAME = "news_articles_2"
 BASE_WEEKLY_COLLECTION_NAME = "weekly_news_articles_"
