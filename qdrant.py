@@ -72,22 +72,8 @@ def insert_article(article, names):
             points=points
         )
 
-def create_dated_snapshot(collection_name: str,
-                          storage_path: str = "qdrant_data:/qdrant/storage"):
-
-    snapshot = client.create_snapshot(collection_name)
-
-    original_name = snapshot.name
-
-    today = datetime.now().strftime("%Y_%m_%d")
-    new_name = f"{collection_name}_{today}.snapshot"
-
-    old_path = os.path.join(storage_path, original_name)
-    new_path = os.path.join(storage_path, new_name)
-
-    os.rename(old_path, new_path)
-
-    return new_name
+def create_dated_snapshot(collection_name: str):
+    client.create_snapshot(collection_name)
 
 if __name__ == "__main__":
     update_weekly_collection()
