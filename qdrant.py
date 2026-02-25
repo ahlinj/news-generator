@@ -73,7 +73,8 @@ def insert_article(article, names):
         )
 
 def create_dated_snapshot(collection_name: str):
-    client.create_snapshot(collection_name)
+    snapshot = client.create_snapshot(collection_name)
+    print(f"Created snapshot for {collection_name}: {snapshot.name} at {snapshot.location}")
 
 if __name__ == "__main__":
     update_weekly_collection()
