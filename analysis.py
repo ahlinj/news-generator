@@ -116,8 +116,11 @@ def call_llm(article_text):
 
 if __name__ == "__main__":
     points = fetch_all_points()
-    print(len(points))
     articles = group_articles(points)
-    print(len(articles))
     full_articles = reconstruct_articles(articles)
-    print(len(full_articles))
+    for article in full_articles:
+        print(article["title"])
+        print(article["text"])
+        extracted = call_llm(article["text"])
+        print(extracted)
+        print("----------------------------------------------------------------------")
