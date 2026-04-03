@@ -38,6 +38,30 @@ def group_articles(points):
 
     return articles
 
+def get_chunk_id(chunk):
+    return chunk["chunk_id"]
+
+def reconstruct_articles(grouped):
+    full_articles = []
+
+    for (title, link), chunks in grouped.items():
+        sorted_chunks = sorted(chunks, key=get_chunk_id)
+
+        texts = []
+        for chunk in sorted_chunks:
+            texts.append(chunk["text"])
+
+        full_text = " ".join(texts)
+
+        full_articles.append({
+            "title": title,
+            "link": link,
+            "text": full_text
+        })
+
+    return full_articles
+
+
 def call_llm(article_text):
     url = "http://hivecore.famnit.upr.si:6666/api/chat"
 
@@ -95,3 +119,5 @@ if __name__ == "__main__":
     print(len(points))
     articles = group_articles(points)
     print(len(articles))
+    full_articles = reconstruct_articles(articles)
+    print(len(full_articles))
