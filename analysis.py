@@ -1,5 +1,6 @@
 import requests
 from qdrant_client import QdrantClient
+from collections import defaultdict
 
 
 COLLECTION_NAME = "news_articles_2"
@@ -26,6 +27,16 @@ def fetch_all_points():
             break
 
     return points
+
+def group_articles(points):
+    articles = defaultdict(list)
+
+    for p in points:
+        payload = p.payload
+        key = (payload["title"], payload["link"])
+        articles[key].append(payload)
+
+    return articles
 
 def call_llm(article_text):
     url = "http://hivecore.famnit.upr.si:6666/api/chat"
@@ -82,4 +93,5 @@ def call_llm(article_text):
 if __name__ == "__main__":
     points = fetch_all_points()
     print(len(points))
-
+    articles = group_articles(points)
+    print(len(articles))
