@@ -1,81 +1,53 @@
-from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
+import requests
 
-MODEL_NAME = "csebuetnlp/mT5_multilingual_XLSum"
+url = "http://hivecore.famnit.upr.si:6666/api/chat"
 
-tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
-model = AutoModelForSeq2SeqLM.from_pretrained(MODEL_NAME)
+prompt = f"""Extract structured information from the following article and return JSON with this schema:
 
+{{
+  "title": string,
+  "summary": string (max 3 sentences),
+  "suitable_for_doctoral_students": "yes" | "no",
+  "field": string,
+  "type": "news" | "event",
+  "application": {{
+    "required": "yes" | "no",
+    "link": string | null,
+    "deadline": string | null
+  }},
+  "date_time": string | null,
+  "location": {{
+    "mode": "onsite" | "online" | "unknown",
+    "place": string | null
+  }},
+  "important_links": string[]
+}}
 
+Article:
 
-def generate_summary(article):
-    prompt = (
-        "summarize: "
-        f"{article['title']}\n\n{article['content']}"
-    )
+From 16 to 20 March 2026, Universidade Católica Portuguesa, Porto Campus, will host the T4EU Common European Heritage Week, in collaboration with Porto GLAM sector stakeholders. Under the theme HERITAGE FUTURE(S) / FUTURE HERITAGE(S): ON THE THRESHOLD OF CHANGE, the week will bring together scholars, practitioners, and students for an intensive programme of training activities, including workshops, public lectures, a roundtable, and a scientific conference.\n\nThe central theme invites us to consider the future(s) of heritage and the heritage(s) of the future: How will our actions today shape our shared tomorrow? What new responsibilities arise as we face rapid ecological, technological, and social transformations? Are our decisions ensuring the sustainability of heritage ecosystems?\n\nThe programme, to be announced shortly, includes a T4EU Transformative Heritage Workshop, T4EU Regional Sustainable Heritage Workshops, an Artist Talk, Public Events with Regional Stakeholders and a enriching social and cultural programme, with a networking dinner with regional stakeholders, city walks, and guided museum visits.\n\nCornelius Holtorf, from the Linnaeus University (UNESCO), Paulo Lourenço, from University of Minho, and Roberta Altin, from University of Trieste are the keynote speakers.\n\nIntegrated in this week, the Annual T4EU Sustainable Heritage Conference will also take place, from 18 to 20 March. This important conference will be jointly organized with EPoCH2026 – the third edition of the international annual conference of the Heritage and Conservation-Restoration research area of CITAR, Católica, offering a unique platform to explore critical reflections and experimental practices in conservation-restoration and heritage studies within the European context.\n\nFrom material care to digital memory, from endangered traditions to emerging sustainable solutions and cultural forms, we will be challenged to critically reflect on the evolving landscapes and to imagine new configurations of practice, ethics, and responsibility – on the threshold of change.
+"""
 
-    inputs = tokenizer(
-        prompt,
-        return_tensors="pt",
-        truncation=True,
-        max_length=2048
-    )
+payload = {
+        "model": "hf.co/unsloth/Qwen3-30B-A3B-Instruct-2507-GGUF:UD-Q4_K_XL",
+        "stream": False,
+        "temperature": 0.1,
+        "messages": [
+            {
+                "role": "system",
+                "content": "You are an information extraction system. Always return ONLY valid JSON. Do not include explanations or text outside JSON. Use the exact schema provided."
+            },
+            {
+                "role": "user",
+                "content": prompt
+            }
+        ]
+    }
 
-    output_ids = model.generate(
-        **inputs,
-        max_length=800,
-        num_beams=4,
-        early_stopping=True
-    )
-
-    return tokenizer.decode(output_ids[0], skip_special_tokens=True)
 
 if __name__ == "__main__":
-    article = {
-        "title": "Mathematical methods and models in support of digital transformation",
-        "content": """Join an interdisciplinary section within the framework of the traditional Spring Scientific Session at Sofia University St. Kliment Ohridski
-
-28 and 29 March 2026 | Sofia University, Bulgaria
-
-Home » News » Mathematical methods and models in support of digital transformation
-
-About
-Transform4Europe Alliance is pleased to invite you to join the interdisciplinary section ‘Mathematical Methods and Models in Support of Digital Transformation’ within the framework of the Spring Scientific Session of the Faculty of Mathematics and Informatics (FMI) of Sofia University ‘St. Kliment Ohridski’.
-
-The event is organised during the year of the rotating presidency of the Transform4Europe alliance by Sofia University and aims to promote interdisciplinary exchange and cooperation between the partners in the Alliance.
-
-All representatives of the academic community and Alliance partners can express interest in participating in the event by submitting an abstract through the scientific session’s electronic system.
-
-The Spring Scientific Session will be held on 28 and 29 March 2026 (Saturday and Sunday) at the Faculty of Mathematics and Informatics of Sofia University “St. Kliment Ohridski”. The reports in the ‘Mathematical Methods and Models in Support of Digital Transformation’ section will be presented on 29 March 2026.
-
-The forum will be dedicated to discussing policies and results related to the development and implementation of new mathematical methods and models for ensuring the quality, security, and effective use of data as a foundation for the digital transformation of the economy and the public sector.
-
-The emphasis in the agenda will be put on innovative approaches and good practices for the effective and responsible implementation of intelligent software agents across various areas of public life.
-
-Important dates:
-
-Abstracts of reports must be submitted through the electronic system of the scientific session by 22 February 2026.
-Participants whose reports have been approved will be notified by 14 March 2026.
-The Spring Science Session will be held on 28 and 29 March 2026.
-The reports in the specialised section of Transform4Europe will be presented on 29 March 2026.
-
-The official language of the event is English.
-
-Full information about the event is available on the official website of the FMI Spring Scientific Session: https://www.fmi.uni-sofia.bg/bg/proletna-nauchna-sesiya-na-fmi-2026
-
-For further questions:
-
-Assoc. Prof. Dafina Petkova, PhD
-
-Vice-dean Master’s Degree Programs, Mobility
-
-Faculty of Mathematics and Informatics,
-
-Sofia University “St. Kliment Ohridski”
-
-email: dafinaz@fmi.uni-sofia.bg
-
-Participation in the ‘Mathematical methods and models in support of digital transformation’ section may be partially funded by the European Union. However, the views and opinions expressed belong to the author(s) and do not necessarily reflect those of the European Union or the European Executive Agency for Education and Culture (EACEA). Neither the European Union nor the EACEA can be held responsible for these views and opinions.
-
-"""
-    }
-    print("Summary: " + generate_summary(article))
+    response = requests.post(
+        url,
+        json=payload,
+    )
+    print(response.json())
