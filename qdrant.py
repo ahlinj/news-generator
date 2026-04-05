@@ -3,7 +3,6 @@ from qdrant_client import QdrantClient
 from sentence_transformers import SentenceTransformer
 from datetime import datetime
 import uuid
-import os
 
 import parse_t4eu
 import parse_upr
