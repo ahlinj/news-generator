@@ -37,6 +37,7 @@ def get_articles():
 
     for suffix in url_suffixes:
         first = True
+        stop_suffix = False
 
         match suffix:
             case "t4eu-/t4eu-priloznosti-/za-studente-/":
@@ -79,6 +80,10 @@ def get_articles():
                         "title": a.find("h5").get_text(strip=True),
                         "link": link
                     })
+
+        if not stop_suffix:
+            print(f"WARNING: last_link not found for suffix {suffix}")
+            print(f"Expected: {last_link}")
 
         if stop_suffix:
             continue
