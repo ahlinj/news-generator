@@ -1,5 +1,6 @@
 logs.json
 qdrant_snapshots
+*.jsonl
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

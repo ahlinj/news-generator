@@ -1,3 +1,5 @@
+import json
+
 import requests
 from qdrant_client import QdrantClient
 from collections import defaultdict
@@ -113,14 +115,29 @@ def call_llm(article_text):
     )
     return response.json()
 
+def extract_json(response):
+    try:
+        content = response["message"]["content"]
+        return json.loads(content)
+    except Exception as e:
+        print("Invalid JSON:", e)
+        return None
+    
+def save_jsonl(data, file_path):
+    with open(file_path, "a", encoding="utf-8") as f:
+        f.write(json.dumps(data, ensure_ascii=False) + "\n")
 
 if __name__ == "__main__":
     points = fetch_all_points()
     articles = group_articles(points)
     full_articles = reconstruct_articles(articles)
     for article in full_articles:
-        print(article["title"])
-        print(article["text"])
         extracted = call_llm(article["text"])
-        print(extracted)
-        print("----------------------------------------------------------------------")
+        extracted_data = extract_json(extracted)
+        if extracted_data:
+            result = {
+                "title": article["title"],
+                "link": article["link"],
+                "llm_output": extracted_data
+            }
+            save_jsonl(result, "extracted_data_1.jsonl")
