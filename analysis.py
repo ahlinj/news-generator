@@ -85,7 +85,7 @@ def call_llm(article_text):
         "mode": "onsite" | "online" | "unknown",
         "place": string | null
     }},
-    "important_links": string[]
+    "important_links": string[] | null
     }}
     
     IMPORTANT:
@@ -93,13 +93,6 @@ def call_llm(article_text):
     - Do NOT extract the visible text between <a>...</a>.
     - Return the full absolute URL exactly as it appears in `href`.
     - Ignore links that are not real URLs (e.g., javascript:void, # anchors).
-
-    Example:
-    Input:
-    <a href="https://example.com/page">example.com</a>
-
-    Output:
-    https://example.com/page
 
     Article:
 
@@ -161,4 +154,4 @@ if __name__ == "__main__":
                 "llm_output": extracted_data
             }
             print(i,"/", len(full_articles))
-            save_jsonl(result, "extracted_data_2.jsonl")
+            save_jsonl(result, "extracted_data_4.jsonl")
