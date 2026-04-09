@@ -1,6 +1,7 @@
 logs.json
 qdrant_snapshots
 *.jsonl
+llm_instructions_history.txt
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

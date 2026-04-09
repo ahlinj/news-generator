@@ -87,6 +87,19 @@ def call_llm(article_text):
     }},
     "important_links": string[]
     }}
+    
+    IMPORTANT:
+    - Always extract the URL from the `href` attribute of <a> tags.
+    - Do NOT extract the visible text between <a>...</a>.
+    - Return the full absolute URL exactly as it appears in `href`.
+    - Ignore links that are not real URLs (e.g., javascript:void, # anchors).
+
+    Example:
+    Input:
+    <a href="https://example.com/page">example.com</a>
+
+    Output:
+    https://example.com/page
 
     Article:
 
@@ -113,7 +126,12 @@ def call_llm(article_text):
         url,
         json=payload,
     )
-    return response.json()
+    try:
+        return response.json()
+    except Exception as e:
+        print("ERROR: Not valid JSON: ", e)
+        print("RAW RESPONSE:", response.text)
+        return None
 
 def extract_json(response):
     try:
@@ -131,7 +149,9 @@ if __name__ == "__main__":
     points = fetch_all_points()
     articles = group_articles(points)
     full_articles = reconstruct_articles(articles)
+    i=0
     for article in full_articles:
+        i=i+1
         extracted = call_llm(article["text"])
         extracted_data = extract_json(extracted)
         if extracted_data:
@@ -140,4 +160,5 @@ if __name__ == "__main__":
                 "link": article["link"],
                 "llm_output": extracted_data
             }
-            save_jsonl(result, "extracted_data_1.jsonl")
+            print(i,"/", len(full_articles))
+            save_jsonl(result, "extracted_data_2.jsonl")
