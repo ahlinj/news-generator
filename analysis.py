@@ -154,7 +154,24 @@ def extract_links_soup(url):
 
     if container is None:
         return ["404 article not found (probably)"]
-    return [a["href"] for a in container.find_all("a", href=True)]
+    
+    links = []
+    for a in container.find_all("a", href=True):
+        href = a["href"]
+
+        ignore_links = ["https://transform4europe.eu/", 
+                        "https://www.facebook.com/Transform4Europe",
+                        "https://www.youtube.com/channel/UCZExnhDJsZEho0d9sIxia0A/videos",
+                        "https://pl.linkedin.com/company/transform4europe",
+                        "https://transform4europe.eu",
+                        "https://www.instagram.com/transform4europe",
+                        "https://transform4europe.eu/category/news/"
+                        ]
+        
+        if href not in ignore_links:
+            links.append(href)
+
+    return links
 
 if __name__ == "__main__":
     points = fetch_all_points()
