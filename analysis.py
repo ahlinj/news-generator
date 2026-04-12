@@ -154,4 +154,4 @@ if __name__ == "__main__":
                 "llm_output": extracted_data
             }
             print(i,"/", len(full_articles))
-            save_jsonl(result, "extracted_data_4.jsonl")
+            save_jsonl(result, "data/extracted_data_4.jsonl")
