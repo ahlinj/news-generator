@@ -3,6 +3,7 @@ import json
 import requests
 from qdrant_client import QdrantClient
 from collections import defaultdict
+from bs4 import BeautifulSoup
 
 
 COLLECTION_NAME = "news_articles_2"
@@ -138,20 +139,38 @@ def save_jsonl(data, file_path):
     with open(file_path, "a", encoding="utf-8") as f:
         f.write(json.dumps(data, ensure_ascii=False) + "\n")
 
+def extract_links_soup(url):
+    response = requests.get(url)
+    html = response.text
+    soup = BeautifulSoup(html, "html.parser")
+
+    container = soup.find("div", attrs={"data-elementor-type": "single-post"})
+    
+    if container is None:
+        container = soup.find("div", attrs={"data-elementor-type": "single-page"})
+
+    if container is None:
+        container = soup.find("div", attrs={"class": "block-courses_details block-courses_details_full P30 bg-0 padding-top-15"})
+
+    if container is None:
+        return ["404 article not found (probably)"]
+    return [a["href"] for a in container.find_all("a", href=True)]
+
 if __name__ == "__main__":
     points = fetch_all_points()
     articles = group_articles(points)
     full_articles = reconstruct_articles(articles)
     i=0
     for article in full_articles:
+        links = extract_links_soup(article["link"])
         i=i+1
-        extracted = call_llm(article["text"])
-        extracted_data = extract_json(extracted)
-        if extracted_data:
-            result = {
-                "title": article["title"],
-                "link": article["link"],
-                "llm_output": extracted_data
-            }
-            print(i,"/", len(full_articles))
-            save_jsonl(result, "data/extracted_data_4.jsonl")
+        #extracted = call_llm(article["text"])
+        #extracted_data = extract_json(extracted):
+        result = {
+            "title": article["title"],
+            "link": article["link"],
+            "important_links": links
+        }
+        print(i,"/", len(full_articles))
+        save_jsonl(result, "data/extracted_soup_links.jsonl")
+            
