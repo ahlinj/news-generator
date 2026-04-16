@@ -173,6 +173,28 @@ def extract_links_soup(url):
 
     return links
 
+def is_link_image(links):
+    image_extensions = [".jpg", ".jpeg", ".png", ".gif", ".bmp", ".svg", ".webp"]
+    images = []
+    for link in links:
+        if any(link.lower().endswith(ext) for ext in image_extensions):
+            images.append(link)
+    return images
+
+def is_link_pdf(links):
+    pdf_links = []
+    for link in links:
+        if link.lower().endswith(".pdf"):
+            pdf_links.append(link)
+    return pdf_links
+
+def is_link_mailto(links):
+    mailto_links = []
+    for link in links:
+        if link.lower().startswith("mailto:"):
+            mailto_links.append(link)
+    return mailto_links
+
 if __name__ == "__main__":
     points = fetch_all_points()
     articles = group_articles(points)
@@ -180,14 +202,20 @@ if __name__ == "__main__":
     i=0
     for article in full_articles:
         links = extract_links_soup(article["link"])
+        images = is_link_image(links)
+        pdfs = is_link_pdf(links)
+        mailto_links = is_link_mailto(links)
         i=i+1
         #extracted = call_llm(article["text"])
         #extracted_data = extract_json(extracted):
         result = {
             "title": article["title"],
             "link": article["link"],
-            "important_links": links
+            "important_links": links,
+            "images": images,
+            "pdfs": pdfs,
+            "mailto_links": mailto_links
         }
         print(i,"/", len(full_articles))
-        save_jsonl(result, "data/extracted_soup_links.jsonl")
+        save_jsonl(result, "data/extracted_soup_links_filtered.jsonl")
             
