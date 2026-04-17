@@ -65,7 +65,11 @@ def reconstruct_articles(grouped):
     return full_articles
 
 
-def call_llm(article_text):
+def call_llm(url):
+    article_html = return_article_html(url)
+    if article_html is None:
+        return None
+
     url = "http://hivecore.famnit.upr.si:6666/api/chat"
 
     prompt = f"""Extract structured information from the following article and return JSON with this schema:
@@ -86,7 +90,10 @@ def call_llm(article_text):
         "mode": "onsite" | "online" | "unknown",
         "place": string | null
     }},
-    "important_links": string[] | null
+    "all_links": string[] | null,
+    "image_links": string[] | null,
+    "pdf_links": string[] | null,
+    "mailto_links": string[] | null
     }}
     
     IMPORTANT:
@@ -94,10 +101,18 @@ def call_llm(article_text):
     - Do NOT extract the visible text between <a>...</a>.
     - Return the full absolute URL exactly as it appears in `href`.
     - Ignore links that are not real URLs (e.g., javascript:void, # anchors).
+    - Ignore also the following links: ["https://transform4europe.eu/", 
+                                        "https://www.facebook.com/Transform4Europe",
+                                        "https://www.youtube.com/channel/UCZExnhDJsZEho0d9sIxia0A/videos",
+                                        "https://pl.linkedin.com/company/transform4europe",
+                                        "https://transform4europe.eu",
+                                        "https://www.instagram.com/transform4europe",
+                                        "https://transform4europe.eu/category/news/"
+                                        ]
 
     Article:
 
-    {article_text}
+    {article_html}
     """
 
     payload = {
@@ -138,6 +153,21 @@ def extract_json(response):
 def save_jsonl(data, file_path):
     with open(file_path, "a", encoding="utf-8") as f:
         f.write(json.dumps(data, ensure_ascii=False) + "\n")
+
+def return_article_html(url):
+    response = requests.get(url)
+    html = response.text
+    soup = BeautifulSoup(html, "html.parser")
+
+    container = soup.find("div", attrs={"data-elementor-type": "single-post"})
+    
+    if container is None:
+        container = soup.find("div", attrs={"data-elementor-type": "single-page"})
+
+    if container is None:
+        container = soup.find("div", attrs={"class": "block-courses_details block-courses_details_full P30 bg-0 padding-top-15"})
+
+    return container
 
 def extract_links_soup(url):
     response = requests.get(url)
@@ -201,21 +231,22 @@ if __name__ == "__main__":
     full_articles = reconstruct_articles(articles)
     i=0
     for article in full_articles:
-        links = extract_links_soup(article["link"])
-        images = is_link_image(links)
-        pdfs = is_link_pdf(links)
-        mailto_links = is_link_mailto(links)
+        #links = extract_links_soup(article["link"])
+        #images = is_link_image(links)
+        #pdfs = is_link_pdf(links)
+        #mailto_links = is_link_mailto(links)
         i=i+1
-        #extracted = call_llm(article["text"])
-        #extracted_data = extract_json(extracted):
-        result = {
-            "title": article["title"],
-            "link": article["link"],
-            "important_links": links,
-            "images": images,
-            "pdfs": pdfs,
-            "mailto_links": mailto_links
-        }
+        extracted = call_llm(article["link"])
+        extracted_data = extract_json(extracted)
+
+        #result = {
+        #    "title": article["title"],
+        #    "link": article["link"],
+        #    "all_links": links,
+        #    "image_links": images,
+        #    "pdf_links": pdfs,
+        #    "mailto_links": mailto_links
+        #}
         print(i,"/", len(full_articles))
-        save_jsonl(result, "data/extracted_soup_links_filtered.jsonl")
+        save_jsonl(extracted_data, "data/extracted_llm_links_filtered_no_common_links.jsonl")
             
