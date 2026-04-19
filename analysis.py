@@ -106,9 +106,9 @@ def call_llm(url):
                                         "https://pl.linkedin.com/company/transform4europe",
                                         "https://transform4europe.eu",
                                         "https://www.instagram.com/transform4europe",
-                                        "https://transform4europe.eu/category/news/",
-                                        "https://transform4europe.eu/wp-content/uploads/2022/06/Logo_Transform4Europe_officialv2.png"
+                                        "https://transform4europe.eu/category/news/"
                                         ]
+    - Do NOT extract the following link from the src of the img element: https://transform4europe.eu/wp-content/uploads/2022/06/Logo_Transform4Europe_officialv2.png
 
     Article:
 
@@ -238,14 +238,14 @@ if __name__ == "__main__":
     full_articles = reconstruct_articles(articles)
     i=0
     for article in full_articles:
-        links, image_links = extract_links_soup(article["link"])
-        images = is_link_image(links)
-        pdfs = is_link_pdf(links)
-        mailto_links = is_link_mailto(links)
+        #links, image_links = extract_links_soup(article["link"])
+        #images = is_link_image(links)
+        #pdfs = is_link_pdf(links)
+        #mailto_links = is_link_mailto(links)
         i=i+1
-        #extracted = call_llm(article["link"])
-        #extracted_data = extract_json(extracted)
-
+        extracted = call_llm(article["link"])
+        extracted_data = extract_json(extracted)
+        """
         result = {
             "title": article["title"],
             "link": article["link"],
@@ -254,5 +254,6 @@ if __name__ == "__main__":
             "pdf_links": pdfs,
             "mailto_links": mailto_links
         }
+        """
         print(i,"/", len(full_articles))
-        save_jsonl(result, "data/extracted_soup_links_filtered_and_img.jsonl")
+        save_jsonl(extracted_data, "data/extracted_llm_links_filtered_no_common_links_2.jsonl")
