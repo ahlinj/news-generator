@@ -100,14 +100,14 @@ def call_llm(url):
     - Always extract the URL from the `href` attribute of <a> tags.
     - Do NOT extract the visible text between <a>...</a>.
     - Return the full absolute URL exactly as it appears in `href`.
-    - Ignore links that are not real URLs (e.g., javascript:void, # anchors).
-    - Ignore also the following links: ["https://transform4europe.eu/", 
+    - Ignore the following links: ["https://transform4europe.eu/", 
                                         "https://www.facebook.com/Transform4Europe",
                                         "https://www.youtube.com/channel/UCZExnhDJsZEho0d9sIxia0A/videos",
                                         "https://pl.linkedin.com/company/transform4europe",
                                         "https://transform4europe.eu",
                                         "https://www.instagram.com/transform4europe",
-                                        "https://transform4europe.eu/category/news/"
+                                        "https://transform4europe.eu/category/news/",
+                                        "https://transform4europe.eu/wp-content/uploads/2022/06/Logo_Transform4Europe_officialv2.png"
                                         ]
 
     Article:
@@ -183,9 +183,10 @@ def extract_links_soup(url):
         container = soup.find("div", attrs={"class": "block-courses_details block-courses_details_full P30 bg-0 padding-top-15"})
 
     if container is None:
-        return ["404 article not found (probably)"]
+        return ["404 article not found (probably)"], ["404 article not found (probably)"]
     
     links = []
+    image_links = []
     for a in container.find_all("a", href=True):
         href = a["href"]
 
@@ -201,7 +202,13 @@ def extract_links_soup(url):
         if href not in ignore_links:
             links.append(href)
 
-    return links
+    for img in container.find_all("img"):
+        if (src := img.get("src")) and src != "https://transform4europe.eu/wp-content/uploads/2022/06/Logo_Transform4Europe_officialv2.png":
+            image_links.append(src)
+
+    return links, image_links
+
+
 
 def is_link_image(links):
     image_extensions = [".jpg", ".jpeg", ".png", ".gif", ".bmp", ".svg", ".webp"]
@@ -231,22 +238,21 @@ if __name__ == "__main__":
     full_articles = reconstruct_articles(articles)
     i=0
     for article in full_articles:
-        #links = extract_links_soup(article["link"])
-        #images = is_link_image(links)
-        #pdfs = is_link_pdf(links)
-        #mailto_links = is_link_mailto(links)
+        links, image_links = extract_links_soup(article["link"])
+        images = is_link_image(links)
+        pdfs = is_link_pdf(links)
+        mailto_links = is_link_mailto(links)
         i=i+1
-        extracted = call_llm(article["link"])
-        extracted_data = extract_json(extracted)
+        #extracted = call_llm(article["link"])
+        #extracted_data = extract_json(extracted)
 
-        #result = {
-        #    "title": article["title"],
-        #    "link": article["link"],
-        #    "all_links": links,
-        #    "image_links": images,
-        #    "pdf_links": pdfs,
-        #    "mailto_links": mailto_links
-        #}
+        result = {
+            "title": article["title"],
+            "link": article["link"],
+            "all_links": links,
+            "image_links": image_links+images,
+            "pdf_links": pdfs,
+            "mailto_links": mailto_links
+        }
         print(i,"/", len(full_articles))
-        save_jsonl(extracted_data, "data/extracted_llm_links_filtered_no_common_links.jsonl")
-            
+        save_jsonl(result, "data/extracted_soup_links_filtered_and_img.jsonl")
