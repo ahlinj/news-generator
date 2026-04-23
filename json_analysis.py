@@ -28,6 +28,7 @@ def compare_jsonl_lengths(path1, path2):
 
     fields = ["image_links", "pdf_links", "mailto_links"]
     total, mismatches = len(pairs) * len(fields), 0
+    mismatches_at = []
 
     for i, (r1, r2) in enumerate(pairs):
         for field in fields:
@@ -35,9 +36,14 @@ def compare_jsonl_lengths(path1, path2):
             c2 = len(r2.get(field) or [])
             if c1 != c2:
                 mismatches += 1
+                mismatches_at.append((i, field))
                 #print(f"Record {i} [{field}]: {c1} vs {c2} — '{r1.get('title')}'")
 
     print(f"\nSuccess: {total - mismatches}/{total} ({(total - mismatches) / total:.1%})")
+    print(f"Mismatches at: {mismatches_at}")
+
+def normalize_link(link):
+    return link.replace("mailto:", "").strip()
 
 def compare_jsonl_elements(path1, path2):
     with open(path1, 'r', encoding='utf-8') as f1, \
@@ -46,13 +52,15 @@ def compare_jsonl_elements(path1, path2):
 
     fields = ["image_links", "pdf_links", "mailto_links"]
     total, mismatches = len(pairs) * len(fields), 0
+    mismatches_at = []
 
     for i, (r1, r2) in enumerate(pairs):
         for field in fields:
-            s1 = set(r1.get(field) or [])
-            s2 = set(r2.get(field) or [])
+            s1 = set(normalize_link(l) for l in (r1.get(field) or []))
+            s2 = set(normalize_link(l) for l in (r2.get(field) or []))
             if s1 != s2:
                 mismatches += 1
+                mismatches_at.append((i, field))
                 missing = s1 - s2
                 extra   = s2 - s1
                 #print(f"Record {i} [{field}] — '{r1.get('title')}'")
@@ -60,7 +68,8 @@ def compare_jsonl_elements(path1, path2):
                 #for l in extra:   print(f"  + {l}")
 
     print(f"\nSuccess: {total - mismatches}/{total} ({(total - mismatches) / total:.1%})")
+    print(f"Mismatches at: {mismatches_at}")
 
 if __name__ == "__main__":
-    compare_jsonl_lengths('data/extracted_llm_links_filtered_no_common_links_3_no_404s.jsonl','data/extracted_soup_links_filtered_and_img_no_404s.jsonl')
-    compare_jsonl_elements('data/extracted_llm_links_filtered_no_common_links_3_no_404s.jsonl','data/extracted_soup_links_filtered_and_img_no_404s.jsonl')
+    compare_jsonl_lengths('data/extracted_soup_links_filtered_and_img_no_404s.jsonl','data/extracted_llm_links_filtered_no_common_links_3_no_404s.jsonl')
+    compare_jsonl_elements('data/extracted_soup_links_filtered_and_img_no_404s.jsonl','data/extracted_llm_links_filtered_no_common_links_3_no_404s.jsonl')
