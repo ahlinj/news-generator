@@ -4,6 +4,7 @@ import requests
 from qdrant_client import QdrantClient
 from collections import defaultdict
 from bs4 import BeautifulSoup
+from urllib.parse import urljoin
 
 
 COLLECTION_NAME = "news_articles_2"
@@ -190,6 +191,7 @@ def extract_links_soup(url):
     for a in container.find_all("a", href=True):
         href = a["href"]
 
+
         ignore_links = ["https://transform4europe.eu/", 
                         "https://www.facebook.com/Transform4Europe",
                         "https://www.youtube.com/channel/UCZExnhDJsZEho0d9sIxia0A/videos",
@@ -199,6 +201,9 @@ def extract_links_soup(url):
                         "https://transform4europe.eu/category/news/"
                         ]
         
+        if href.startswith("/"):
+            href = urljoin(url, href)
+
         if href not in ignore_links:
             links.append(href)
 
@@ -238,14 +243,14 @@ if __name__ == "__main__":
     full_articles = reconstruct_articles(articles)
     i=0
     for article in full_articles:
-        #links, image_links = extract_links_soup(article["link"])
-        #images = is_link_image(links)
-        #pdfs = is_link_pdf(links)
-        #mailto_links = is_link_mailto(links)
+        links, image_links = extract_links_soup(article["link"])
+        images = is_link_image(links)
+        pdfs = is_link_pdf(links)
+        mailto_links = is_link_mailto(links)
         i=i+1
-        extracted = call_llm(article["link"])
-        extracted_data = extract_json(extracted)
-        """
+        #extracted = call_llm(article["link"])
+        #extracted_data = extract_json(extracted)
+        
         result = {
             "title": article["title"],
             "link": article["link"],
@@ -254,6 +259,6 @@ if __name__ == "__main__":
             "pdf_links": pdfs,
             "mailto_links": mailto_links
         }
-        """
+        
         print(i,"/", len(full_articles))
-        save_jsonl(extracted_data, "data/extracted_llm_links_filtered_no_common_links_3.jsonl")
+        save_jsonl(result, "data/extracted_soup_links_filtered_and_img_2.jsonl")
