@@ -43,7 +43,7 @@ def compare_jsonl_lengths(path1, path2):
     print(f"Mismatches at: {mismatches_at}")
 
 def normalize_link(link):
-    return link.replace("mailto:", "").strip()
+    return link.replace("mailto:", "").strip().lower()
 
 def compare_jsonl_elements(path1, path2):
     with open(path1, 'r', encoding='utf-8') as f1, \
@@ -63,9 +63,9 @@ def compare_jsonl_elements(path1, path2):
                 mismatches_at.append((i, field))
                 missing = s1 - s2
                 extra   = s2 - s1
-                #print(f"Record {i} [{field}] — '{r1.get('title')}'")
-                #for l in missing: print(f"  ✗ {l}")
-                #for l in extra:   print(f"  + {l}")
+                print(f"Record {i} [{field}] — '{r1.get('title')}'")
+                for l in missing: print(f"  ✗ {l}")
+                for l in extra:   print(f"  + {l}")
 
     print(f"\nSuccess: {total - mismatches}/{total} ({(total - mismatches) / total:.1%})")
     print(f"Mismatches at: {mismatches_at}")
@@ -73,3 +73,5 @@ def compare_jsonl_elements(path1, path2):
 if __name__ == "__main__":
     compare_jsonl_lengths('data/extracted_soup_links_filtered_and_img_no_404s.jsonl','data/extracted_llm_links_filtered_no_common_links_3_no_404s.jsonl')
     compare_jsonl_elements('data/extracted_soup_links_filtered_and_img_no_404s.jsonl','data/extracted_llm_links_filtered_no_common_links_3_no_404s.jsonl')
+
+    clean_jsonl('data/extracted_soup_links_filtered_and_img_2.jsonl', 'data/extracted_soup_links_filtered_and_img_2_no_404s.jsonl')
