@@ -32,8 +32,8 @@ def compare_jsonl_lengths(path1, path2):
 
     for i, (r1, r2) in enumerate(pairs):
         for field in fields:
-            c1 = len(r1.get(field) or [])
-            c2 = len(r2.get(field) or [])
+            c1 = len(set(r1.get(field) or []))
+            c2 = len(set(r2.get(field) or []))
             if c1 != c2:
                 mismatches += 1
                 mismatches_at.append((i, field))
