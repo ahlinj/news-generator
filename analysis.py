@@ -5,7 +5,9 @@ from qdrant_client import QdrantClient
 from collections import defaultdict
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin
+import re
 
+EMAIL_REGEX = re.compile(r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}[.,;:!?]?')
 
 COLLECTION_NAME = "news_articles_2"
 
@@ -184,10 +186,12 @@ def extract_links_soup(url):
         container = soup.find("div", attrs={"class": "block-courses_details block-courses_details_full P30 bg-0 padding-top-15"})
 
     if container is None:
-        return ["404 article not found (probably)"], ["404 article not found (probably)"]
+        return ["404 article not found (probably)"], ["404 article not found (probably)"], ["404 article not found (probably)"]
     
     links = []
     image_links = []
+    mail_links = set()
+
     for a in container.find_all("a", href=True):
         href = a["href"]
 
@@ -211,8 +215,11 @@ def extract_links_soup(url):
         if (src := img.get("src")) and src != "https://transform4europe.eu/wp-content/uploads/2022/06/Logo_Transform4Europe_officialv2.png":
             image_links.append(src)
 
-    return links, image_links
+    for text in container.stripped_strings:
+        for match in EMAIL_REGEX.findall(text):
+            mail_links.add(match.rstrip(".,;:!?"))
 
+    return links, image_links, list(mail_links)
 
 
 def is_link_image(links):
@@ -243,7 +250,7 @@ if __name__ == "__main__":
     full_articles = reconstruct_articles(articles)
     i=0
     for article in full_articles:
-        links, image_links = extract_links_soup(article["link"])
+        links, image_links, mail_links = extract_links_soup(article["link"])
         images = is_link_image(links)
         pdfs = is_link_pdf(links)
         mailto_links = is_link_mailto(links)
@@ -257,8 +264,8 @@ if __name__ == "__main__":
             "all_links": links,
             "image_links": image_links+images,
             "pdf_links": pdfs,
-            "mailto_links": mailto_links
+            "mailto_links": mailto_links+mail_links,
         }
         
         print(i,"/", len(full_articles))
-        save_jsonl(result, "data/extracted_soup_links_filtered_and_img_2.jsonl")
+        save_jsonl(result, "data/extracted_soup_links_filtered_and_img_3.jsonl")
