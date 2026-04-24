@@ -32,8 +32,8 @@ def compare_jsonl_lengths(path1, path2):
 
     for i, (r1, r2) in enumerate(pairs):
         for field in fields:
-            c1 = len(set(r1.get(field) or []))
-            c2 = len(set(r2.get(field) or []))
+            c1 = len(set(normalize_link(l) for l in (r1.get(field) or [])))
+            c2 = len(set(normalize_link(l) for l in (r2.get(field) or [])))
             if c1 != c2:
                 mismatches += 1
                 mismatches_at.append((i, field))
@@ -71,5 +71,5 @@ def compare_jsonl_elements(path1, path2):
     print(f"Mismatches at: {mismatches_at}")
 
 if __name__ == "__main__":
-    compare_jsonl_lengths('data/extracted_soup_links_filtered_and_img_no_404s.jsonl','data/extracted_llm_links_filtered_no_common_links_3_no_404s.jsonl')
-    compare_jsonl_elements('data/extracted_soup_links_filtered_and_img_no_404s.jsonl','data/extracted_llm_links_filtered_no_common_links_3_no_404s.jsonl')
+    compare_jsonl_lengths('data/extracted_soup_links_filtered_and_img_3_no_404s.jsonl','data/extracted_llm_links_filtered_no_common_links_3_no_404s.jsonl')
+    compare_jsonl_elements('data/extracted_soup_links_filtered_and_img_3_no_404s.jsonl','data/extracted_llm_links_filtered_no_common_links_3_no_404s.jsonl')
