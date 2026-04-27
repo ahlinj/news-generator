@@ -109,9 +109,15 @@ def call_llm(url):
                                         "https://pl.linkedin.com/company/transform4europe",
                                         "https://transform4europe.eu",
                                         "https://www.instagram.com/transform4europe",
-                                        "https://transform4europe.eu/category/news/"
+                                        "https://transform4europe.eu/category/news/",
+                                        "https://www.instagram.com/transform4europe/https://www.instagram.com/transform4europe/https://www.instagram.com/transform4europe/"
                                         ]
-    - Do NOT extract the following link from the src of the img element: https://transform4europe.eu/wp-content/uploads/2022/06/Logo_Transform4Europe_officialv2.png
+    - Do NOT extract the following links from the src of the img element: ["https://transform4europe.eu/wp-content/uploads/2022/06/Logo_Transform4Europe_officialv2.png",
+                                                                            "https://transform4europe.eu/wp-content/uploads/2022/06/favicon-300x300.png"]
+    - For <img> tags, extract only the URL from the `src` attribute. Ignore `srcset` entirely.
+    - For links that start with `/`, prepend the base domain to make them absolute
+    - Under pdf_links extract only links that end with .pdf
+    - Under image_links extract only links that end with .jpg, .jpeg, .png, .gif, .bmp, .svg, .webp
 
     Article:
 
@@ -202,7 +208,8 @@ def extract_links_soup(url):
                         "https://pl.linkedin.com/company/transform4europe",
                         "https://transform4europe.eu",
                         "https://www.instagram.com/transform4europe",
-                        "https://transform4europe.eu/category/news/"
+                        "https://transform4europe.eu/category/news/",
+                        "https://www.instagram.com/transform4europe/https://www.instagram.com/transform4europe/https://www.instagram.com/transform4europe/"
                         ]
         
         if href.startswith("/"):
@@ -212,7 +219,11 @@ def extract_links_soup(url):
             links.append(href)
 
     for img in container.find_all("img"):
-        if (src := img.get("src")) and src != "https://transform4europe.eu/wp-content/uploads/2022/06/Logo_Transform4Europe_officialv2.png":
+        if (src := img.get("src")) and src not in ["https://transform4europe.eu/wp-content/uploads/2022/06/favicon-300x300.png", 
+                                                   "https://transform4europe.eu/wp-content/uploads/2022/06/Logo_Transform4Europe_officialv2.png"]:
+            if src.startswith("/"):
+                src = urljoin(url, src)
+
             image_links.append(src)
 
     for text in container.stripped_strings:
@@ -250,14 +261,14 @@ if __name__ == "__main__":
     full_articles = reconstruct_articles(articles)
     i=0
     for article in full_articles:
-        links, image_links, mail_links = extract_links_soup(article["link"])
-        images = is_link_image(links)
-        pdfs = is_link_pdf(links)
-        mailto_links = is_link_mailto(links)
+        #links, image_links, mail_links = extract_links_soup(article["link"])
+        #images = is_link_image(links)
+        #pdfs = is_link_pdf(links)
+        #mailto_links = is_link_mailto(links)
         i=i+1
-        #extracted = call_llm(article["link"])
-        #extracted_data = extract_json(extracted)
-        
+        extracted = call_llm(article["link"])
+        extracted_data = extract_json(extracted)
+        """
         result = {
             "title": article["title"],
             "link": article["link"],
@@ -266,6 +277,6 @@ if __name__ == "__main__":
             "pdf_links": pdfs,
             "mailto_links": mailto_links+mail_links,
         }
-        
+        """
         print(i,"/", len(full_articles))
-        save_jsonl(result, "data/extracted_soup_links_filtered_and_img_3.jsonl")
+        save_jsonl(extracted_data, "data/extracted_llm_links_filtered_no_common_links_8.jsonl")

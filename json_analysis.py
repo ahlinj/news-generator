@@ -71,5 +71,5 @@ def compare_jsonl_elements(path1, path2):
     print(f"Mismatches at: {mismatches_at}")
 
 if __name__ == "__main__":
-    compare_jsonl_lengths('data/extracted_soup_links_filtered_and_img_3_no_404s.jsonl','data/extracted_llm_links_filtered_no_common_links_3_no_404s.jsonl')
-    compare_jsonl_elements('data/extracted_soup_links_filtered_and_img_3_no_404s.jsonl','data/extracted_llm_links_filtered_no_common_links_3_no_404s.jsonl')
+    compare_jsonl_lengths('data/extracted_soup_links_filtered_and_img_5_no_404s.jsonl','data/extracted_llm_links_filtered_no_common_links_7_no_404s.jsonl')
+    compare_jsonl_elements('data/extracted_soup_links_filtered_and_img_5_no_404s.jsonl','data/extracted_llm_links_filtered_no_common_links_7_no_404s.jsonl')
