@@ -3,6 +3,7 @@ qdrant_snapshots
 *.jsonl
 llm_instructions_history.txt
 soup_diff.txt
+stats.txt
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

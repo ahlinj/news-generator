@@ -1,4 +1,7 @@
 import json
+import os
+from dotenv import load_dotenv
+from tqdm import tqdm
 
 import requests
 from qdrant_client import QdrantClient
@@ -6,6 +9,10 @@ from collections import defaultdict
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin
 import re
+
+
+load_dotenv()
+token = os.getenv("BEARER_TOKEN")
 
 EMAIL_REGEX = re.compile(r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}[.,;:!?]?')
 
@@ -40,12 +47,15 @@ def group_articles(points):
     for p in points:
         payload = p.payload
         key = (payload["title"], payload["link"])
-        articles[key].append(payload)
+        articles[key].append({
+            "payload": payload,
+            "point_id": p.id
+        })
 
     return articles
 
 def get_chunk_id(chunk):
-    return chunk["chunk_id"]
+    return chunk["payload"]["chunk_id"]
 
 def reconstruct_articles(grouped):
     full_articles = []
@@ -54,15 +64,18 @@ def reconstruct_articles(grouped):
         sorted_chunks = sorted(chunks, key=get_chunk_id)
 
         texts = []
+        point_ids = []
         for chunk in sorted_chunks:
-            texts.append(chunk["text"])
+            texts.append(chunk["payload"]["text"])
+            point_ids.append(chunk["point_id"])
 
         full_text = " ".join(texts)
 
         full_articles.append({
             "title": title,
             "link": link,
-            "text": full_text
+            "text": full_text,
+            "point_ids": point_ids
         })
 
     return full_articles
@@ -72,10 +85,37 @@ def call_llm(url):
     article_html = return_article_html(url)
     if article_html is None:
         return None
+    
+    null_response = {
+        "title": None,
+        "summary": None,
+        "suitable_for_doctoral_students": None,
+        "field": None,
+        "type": None,
+        "application": {
+            "required": None,
+            "link": None,
+            "deadline": None
+        },
+        "date_time": None,
+        "location": {
+            "mode": None,
+            "place": None
+        },
+        "all_links": None,
+        "image_links": None,
+        "pdf_links": None,
+        "mailto_links": None
+    }
 
     url = "http://hivecore.famnit.upr.si:6666/api/chat"
 
-    prompt = f"""Extract structured information from the following article and return JSON with this schema:
+    system_prompt = f"""
+        You are an information extraction system. Always return ONLY valid JSON. Do not include explanations or text outside JSON. Use the exact schema provided.
+    """
+
+    prompt = f"""
+    Extract structured information from the following article and return JSON with this schema:
 
     {{
     "title": string,
@@ -115,7 +155,6 @@ def call_llm(url):
     - Do NOT extract the following links from the src of the img element: ["https://transform4europe.eu/wp-content/uploads/2022/06/Logo_Transform4Europe_officialv2.png",
                                                                             "https://transform4europe.eu/wp-content/uploads/2022/06/favicon-300x300.png"]
     - For <img> tags, extract only the URL from the `src` attribute. Ignore `srcset` entirely.
-    - For links that start with `/`, prepend the base domain to make them absolute
     - Under pdf_links extract only links that end with .pdf
     - Under image_links extract only links that end with .jpg, .jpeg, .png, .gif, .bmp, .svg, .webp
 
@@ -131,7 +170,7 @@ def call_llm(url):
             "messages": [
                 {
                     "role": "system",
-                    "content": "You are an information extraction system. Always return ONLY valid JSON. Do not include explanations or text outside JSON. Use the exact schema provided."
+                    "content": system_prompt
                 },
                 {
                     "role": "user",
@@ -140,24 +179,50 @@ def call_llm(url):
             ]
         }
     
+    headers = {
+    "Authorization": f"Bearer {token}"
+    }
+    
     response = requests.post(
         url,
         json=payload,
+        headers=headers
     )
     try:
         return response.json()
-    except Exception as e:
-        print("ERROR: Not valid JSON: ", e)
-        print("RAW RESPONSE:", response.text)
-        return None
+    except Exception:
+        return {
+            "message": {
+                "content": json.dumps(null_response)
+            }
+        }
 
 def extract_json(response):
     try:
         content = response["message"]["content"]
         return json.loads(content)
-    except Exception as e:
-        print("Invalid JSON:", e)
-        return None
+    except Exception:
+        return {
+            "title": None,
+            "summary": None,
+            "suitable_for_doctoral_students": None,
+            "field": None,
+            "type": None,
+            "application": {
+                "required": None,
+                "link": None,
+                "deadline": None
+            },
+            "date_time": None,
+            "location": {
+                "mode": None,
+                "place": None
+            },
+            "all_links": None,
+            "image_links": None,
+            "pdf_links": None,
+            "mailto_links": None
+        }
     
 def save_jsonl(data, file_path):
     with open(file_path, "a", encoding="utf-8") as f:
@@ -256,27 +321,45 @@ def is_link_mailto(links):
     return mailto_links
 
 if __name__ == "__main__":
+    successful_updates = 0
+    failed_updates = 0
+
     points = fetch_all_points()
     articles = group_articles(points)
     full_articles = reconstruct_articles(articles)
-    i=0
-    for article in full_articles:
-        #links, image_links, mail_links = extract_links_soup(article["link"])
-        #images = is_link_image(links)
-        #pdfs = is_link_pdf(links)
-        #mailto_links = is_link_mailto(links)
-        i=i+1
-        extracted = call_llm(article["link"])
-        extracted_data = extract_json(extracted)
-        """
-        result = {
-            "title": article["title"],
-            "link": article["link"],
-            "all_links": links,
-            "image_links": image_links+images,
-            "pdf_links": pdfs,
-            "mailto_links": mailto_links+mail_links,
-        }
-        """
-        print(i,"/", len(full_articles))
-        save_jsonl(extracted_data, "data/extracted_llm_links_filtered_no_common_links_8.jsonl")
+    for article in tqdm(full_articles, desc="Processing articles"):
+        try:
+            #links, image_links, mail_links = extract_links_soup(article["link"])
+            #images = is_link_image(links)
+            #pdfs = is_link_pdf(links)
+            #mailto_links = is_link_mailto(links)
+            extracted = call_llm(article["link"])
+            extracted_data = extract_json(extracted)
+
+            client.set_payload(
+                collection_name=COLLECTION_NAME,
+                payload=extracted_data,
+                points=article["point_ids"],
+                wait=True
+            )
+            
+            successful_updates += 1
+            """
+            result = {
+                "title": article["title"],
+                "link": article["link"],
+                "all_links": links,
+                "image_links": image_links+images,
+                "pdf_links": pdfs,
+                "mailto_links": mailto_links+mail_links,
+            }
+            """
+            save_jsonl(extracted_data, "data/extracted_llm_links_filtered_no_common_links_8_all.jsonl")
+        except Exception as e:
+            print(f"✗ Failed to process {article['link']}: {e}")
+            failed_updates += 1
+    print(f"\n{'='*50}")
+    print(f"Summary:")
+    print(f"  Successful: {successful_updates}")
+    print(f"  Failed: {failed_updates}")
+    print(f"  Total: {len(full_articles)}")
