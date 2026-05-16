@@ -352,7 +352,7 @@ if __name__ == "__main__":
                 "mailto_links": mailto_links+mail_links,
             }
             """
-            save_jsonl(extracted_data, "data/extracted_llm_links_filtered_no_common_links_8_all.jsonl")
+            #save_jsonl(extracted_data, "data/extracted_llm_links_filtered_no_common_links_8_all.jsonl")
         except Exception as e:
             print(f"✗ Failed to process {article['link']}: {e}")
             failed_updates += 1
