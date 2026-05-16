@@ -87,7 +87,6 @@ def call_llm(url):
         return None
     
     null_response = {
-        "title": None,
         "summary": None,
         "suitable_for_doctoral_students": None,
         "field": None,
@@ -203,7 +202,6 @@ def extract_json(response):
         return json.loads(content)
     except Exception:
         return {
-            "title": None,
             "summary": None,
             "suitable_for_doctoral_students": None,
             "field": None,
