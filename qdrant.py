@@ -76,55 +76,58 @@ def insert_article(article, names, last_flag):
         )
     
     if datetime.now().isoweekday() == 7 and last_flag:  # Sunday
-        points = analysis.fetch_all_points(WEEKLY_COLLECTION_NAME)
-        articles = analysis.group_articles(points)
-        full_articles = analysis.reconstruct_articles(articles)
+        process_weekly_llm()
 
-        for article in full_articles:
-            extracted = analysis.call_llm(article["link"])
-            extracted_data = analysis.extract_json(extracted)
-            
-            client.set_payload(
-                collection_name=WEEKLY_COLLECTION_NAME,
-                payload=extracted_data,
-                points=article["point_ids"],
-                wait=True
+def process_weekly_llm():
+    points = analysis.fetch_all_points(WEEKLY_COLLECTION_NAME)
+    articles = analysis.group_articles(points)
+    full_articles = analysis.reconstruct_articles(articles)
+
+    for article in full_articles:
+        extracted = analysis.call_llm(article["link"])
+        extracted_data = analysis.extract_json(extracted)
+        
+        client.set_payload(
+            collection_name=WEEKLY_COLLECTION_NAME,
+            payload=extracted_data,
+            points=article["point_ids"],
+            wait=True
+        )
+        
+        filtered_points = []
+        offset = None
+
+        while True:
+            batch, offset = client.scroll(
+                collection_name=COLLECTION_NAME,
+                scroll_filter=Filter(
+                    must=[
+                        FieldCondition(
+                            key="link",
+                            match=MatchValue(value=article["link"])
+                        )
+                    ]
+                ),
+                limit=100,
+                offset=offset,
+                with_payload=False,
+                with_vectors=False
             )
             
-            filtered_points = []
-            offset = None
-
-            while True:
-                batch, offset = client.scroll(
-                    collection_name=COLLECTION_NAME,
-                    scroll_filter=Filter(
-                        must=[
-                            FieldCondition(
-                                key="link",
-                                match=MatchValue(value=article["link"])
-                            )
-                        ]
-                    ),
-                    limit=100,
-                    offset=offset,
-                    with_payload=False,
-                    with_vectors=False
-                )
-                
-                filtered_points.extend(batch)
-                
-                if offset is None:
-                    break
+            filtered_points.extend(batch)
             
-            if filtered_points:
-                point_ids_other = [p.id for p in filtered_points]
-                
-                client.set_payload(
-                    collection_name=COLLECTION_NAME,
-                    payload=extracted_data,
-                    points=point_ids_other,
-                    wait=True
-                )
+            if offset is None:
+                break
+        
+        if filtered_points:
+            point_ids_other = [p.id for p in filtered_points]
+            
+            client.set_payload(
+                collection_name=COLLECTION_NAME,
+                payload=extracted_data,
+                points=point_ids_other,
+                wait=True
+            )
 
 def create_dated_snapshot(collection_name: str):
     client.create_snapshot(collection_name)
@@ -139,9 +142,13 @@ if __name__ == "__main__":
         parse_upr.get_articles()
     )
 
-    for article in articles:
-        last_flag = (article == articles[-1])
-        insert_article(article, [COLLECTION_NAME, WEEKLY_COLLECTION_NAME], last_flag)
+    if not articles:
+        if datetime.now().isoweekday() == 7:
+            process_weekly_llm()
+    else:
+        for article in articles:
+            last_flag = (article == articles[-1])
+            insert_article(article, [COLLECTION_NAME, WEEKLY_COLLECTION_NAME], last_flag)
 
     create_dated_snapshot(COLLECTION_NAME)
     create_dated_snapshot(WEEKLY_COLLECTION_NAME)
