@@ -21,13 +21,13 @@ COLLECTION_NAME = "news_articles_2"
 
 client = QdrantClient(host="localhost", port=6333)
 
-def fetch_all_points():
+def fetch_all_points(name):
     points = []
     offset = None
 
     while True:
         batch, offset = client.scroll(
-            collection_name=COLLECTION_NAME,
+            collection_name=name,
             limit=500,
             with_payload=True,
             with_vectors=False,
@@ -322,7 +322,7 @@ if __name__ == "__main__":
     successful_updates = 0
     failed_updates = 0
 
-    points = fetch_all_points()
+    points = fetch_all_points(COLLECTION_NAME)
     articles = group_articles(points)
     full_articles = reconstruct_articles(articles)
     for article in tqdm(full_articles, desc="Processing articles"):

@@ -6,6 +6,7 @@ import uuid
 
 import parse_t4eu
 import parse_upr
+import analysis
 
 client = QdrantClient(host="localhost", port=6333)
 
@@ -45,7 +46,7 @@ def chunk_text(text, chunk_size=150, overlap=50):
 
     return chunks
 
-def insert_article(article, names):
+def insert_article(article, names, last_flag):
     chunks = chunk_text(article["content"])
     vectors = model.encode(chunks)
     
@@ -73,6 +74,21 @@ def insert_article(article, names):
             collection_name=name,
             points=points
         )
+    
+    if datetime.now().isoweekday() == 7 and last_flag:  # Sunday
+        points = analysis.fetch_all_points(WEEKLY_COLLECTION_NAME)
+        articles = analysis.group_articles(points)
+        full_articles = analysis.reconstruct_articles(articles)
+        for article in full_articles:
+            extracted = analysis.call_llm(article["link"])
+            extracted_data = analysis.extract_json(extracted)
+
+            client.set_payload(
+                collection_name=WEEKLY_COLLECTION_NAME,
+                payload=extracted_data,
+                points=article["point_ids"],
+                wait=True
+            )
 
 def create_dated_snapshot(collection_name: str):
     client.create_snapshot(collection_name)
@@ -88,7 +104,8 @@ if __name__ == "__main__":
     )
 
     for article in articles:
-        insert_article(article, [COLLECTION_NAME, WEEKLY_COLLECTION_NAME])
+        last_flag = (article == articles[-1])
+        insert_article(article, [COLLECTION_NAME, WEEKLY_COLLECTION_NAME], last_flag)
 
     create_dated_snapshot(COLLECTION_NAME)
     create_dated_snapshot(WEEKLY_COLLECTION_NAME)
