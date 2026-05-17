@@ -1,4 +1,4 @@
-from qdrant_client.models import VectorParams, Distance, PointStruct
+from qdrant_client.models import VectorParams, Distance, PointStruct, Filter, FieldCondition, MatchValue
 from qdrant_client import QdrantClient
 from sentence_transformers import SentenceTransformer
 from datetime import datetime
@@ -79,16 +79,52 @@ def insert_article(article, names, last_flag):
         points = analysis.fetch_all_points(WEEKLY_COLLECTION_NAME)
         articles = analysis.group_articles(points)
         full_articles = analysis.reconstruct_articles(articles)
+
         for article in full_articles:
             extracted = analysis.call_llm(article["link"])
             extracted_data = analysis.extract_json(extracted)
-
+            
             client.set_payload(
                 collection_name=WEEKLY_COLLECTION_NAME,
                 payload=extracted_data,
                 points=article["point_ids"],
                 wait=True
             )
+            
+            filtered_points = []
+            offset = None
+
+            while True:
+                batch, offset = client.scroll(
+                    collection_name=COLLECTION_NAME,
+                    scroll_filter=Filter(
+                        must=[
+                            FieldCondition(
+                                key="link",
+                                match=MatchValue(value=article["link"])
+                            )
+                        ]
+                    ),
+                    limit=100,
+                    offset=offset,
+                    with_payload=False,
+                    with_vectors=False
+                )
+                
+                filtered_points.extend(batch)
+                
+                if offset is None:
+                    break
+            
+            if filtered_points:
+                point_ids_other = [p.id for p in filtered_points]
+                
+                client.set_payload(
+                    collection_name=COLLECTION_NAME,
+                    payload=extracted_data,
+                    points=point_ids_other,
+                    wait=True
+                )
 
 def create_dated_snapshot(collection_name: str):
     client.create_snapshot(collection_name)
