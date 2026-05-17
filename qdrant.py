@@ -66,9 +66,6 @@ def insert_article(article, names, last_flag):
             )
         )
 
-    if len(points) == 0:
-        return
-
     for name in names:
         client.upsert(
             collection_name=name,
