@@ -1,3 +1,5 @@
+import json
+
 from qdrant_client.models import VectorParams, Distance, PointStruct, Filter, FieldCondition, MatchValue
 from qdrant_client import QdrantClient
 from sentence_transformers import SentenceTransformer
@@ -125,6 +127,24 @@ def process_weekly_llm():
                 points=point_ids_other,
                 wait=True
             )
+    
+    final_points = analysis.fetch_all_points(WEEKLY_COLLECTION_NAME)
+
+    seen_links = set()
+    export_data = []
+    
+    for point in final_points:
+        link = point.payload.get("link")
+        if link not in seen_links:
+            seen_links.add(link)
+            export_data.append(point.payload)
+    
+    week_number = datetime.now().isocalendar()[1]
+    file_path = f"weekly_jsonls/weekly_articles_week_{week_number}.jsonl"
+    
+    with open(file_path, "w", encoding="utf-8") as f:
+        for record in export_data:
+            f.write(json.dumps(record, ensure_ascii=False) + "\n")
 
 def create_dated_snapshot(collection_name: str):
     client.create_snapshot(collection_name)
