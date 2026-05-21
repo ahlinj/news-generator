@@ -1,4 +1,6 @@
 import json
+import os
+import requests
 
 from qdrant_client.models import VectorParams, Distance, PointStruct, Filter, FieldCondition, MatchValue
 from qdrant_client import QdrantClient
@@ -18,6 +20,9 @@ COLLECTION_NAME = "news_articles_2"
 BASE_WEEKLY_COLLECTION_NAME = "weekly_news_articles_"
 
 VECTOR_SIZE = 384
+
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
 def update_weekly_collection():
     week_number = datetime.now().isocalendar()[1]
@@ -76,6 +81,16 @@ def insert_article(article, names, last_flag):
     
     if datetime.now().isoweekday() == 7 and last_flag:  # Sunday
         process_weekly_llm()
+
+def send_telegram_file(file_path: str, caption: str):
+    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendDocument"
+    
+    with open(file_path, "rb") as f:
+        requests.post(
+            url,
+            data={"chat_id": TELEGRAM_CHAT_ID, "caption": caption},
+            files={"document": f}
+        )
 
 def process_weekly_llm():
     points = analysis.fetch_all_points(WEEKLY_COLLECTION_NAME)
@@ -145,6 +160,9 @@ def process_weekly_llm():
     with open(file_path, "w", encoding="utf-8") as f:
         for record in export_data:
             f.write(json.dumps(record, ensure_ascii=False) + "\n")
+
+    caption = f"📰 Weekly articles - Week {week_number} ({datetime.now().strftime('%d.%m.%Y')})\nTotal articles: {len(export_data)}"
+    send_telegram_file(file_path, caption)
 
 def create_dated_snapshot(collection_name: str):
     client.create_snapshot(collection_name)
