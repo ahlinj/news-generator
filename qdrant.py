@@ -6,11 +6,15 @@ from qdrant_client.models import VectorParams, Distance, PointStruct, Filter, Fi
 from qdrant_client import QdrantClient
 from sentence_transformers import SentenceTransformer
 from datetime import datetime
+from jinja2 import Environment, FileSystemLoader
+from pathlib import Path
 import uuid
 
 import parse_t4eu
 import parse_upr
 import analysis
+
+_env = Environment(loader=FileSystemLoader(Path(__file__).parent))
 
 client = QdrantClient(host="localhost", port=6333)
 
@@ -155,14 +159,60 @@ def process_weekly_llm():
             export_data.append(point.payload)
     
     week_number = datetime.now().isocalendar()[1]
-    file_path = f"weekly_jsonls/weekly_articles_week_{week_number}.jsonl"
+    jsonl_path = f"weekly_jsonls/weekly_articles_week_{week_number}.jsonl"
+    html_path = f"weekly_jsonls/weekly_articles_week_{week_number}.html"
     
-    with open(file_path, "w", encoding="utf-8") as f:
+    with open(jsonl_path, "w", encoding="utf-8") as f:
         for record in export_data:
             f.write(json.dumps(record, ensure_ascii=False) + "\n")
 
+    with open(html_path, "w", encoding="utf-8") as f:
+        f.write(jsonl_to_html(jsonl_path))
+
     caption = f"📰 Weekly articles - Week {week_number} ({datetime.now().strftime('%d.%m.%Y')})\nTotal articles: {len(export_data)}"
-    send_telegram_file(file_path, caption)
+    send_telegram_file(html_path, caption)
+
+def jsonl_to_html(jsonl_path: str) -> str:
+    with open(jsonl_path, encoding="utf-8") as f:
+        records = [json.loads(line) for line in f]
+
+    articles = []
+    for r in records:
+        date_str = ""
+        if r.get("date_time"):
+            try:
+                date_str = datetime.fromisoformat(r["date_time"]).strftime("%d %b %Y, %H:%M")
+            except:
+                date_str = r["date_time"]
+
+        loc = r.get("location", {}) or {}
+        app = r.get("application", {}) or {}
+
+        articles.append({
+            "title": r.get("title", ""),
+            "link": r.get("link", ""),
+            "summary": r.get("summary", ""),
+            "image": r["image_links"][0] if r.get("image_links") else None,
+            "type": r.get("type"),
+            "field": r.get("field"),
+            "doctoral": "yes" if r.get("suitable_for_doctoral_students") == "yes" else "no",
+            "date_str": date_str,
+            "location_mode": loc.get("mode", "unknown"),
+            "location_place": loc.get("place"),
+            "application_required": app.get("required", "no"),
+            "application_deadline": app.get("deadline"),
+            "application_link": app.get("link"),
+            "all_links": r.get("all_links") or [],
+            "pdf_links": r.get("pdf_links") or [],
+            "mailto_links": r.get("mailto_links") or [],
+        })
+
+    now = datetime.now()
+    return _env.get_template("template.html").render(
+        week=now.isocalendar()[1],
+        date=now.strftime("%d.%m.%Y"),
+        articles=articles,
+    )
 
 def create_dated_snapshot(collection_name: str):
     client.create_snapshot(collection_name)

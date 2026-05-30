@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html><head>
+<meta charset="UTF-8">
+<title>Week {{ week }}</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: monospace; background: #fff; color: #111; padding: 2rem 1rem; max-width: 860px; margin: 0 auto; }
+h1 { font-size: 1.2rem; margin-bottom: .25rem; }
+.meta { font-size: .85rem; color: #888; margin-bottom: 2rem; }
+.card { border-top: 2px solid #111; padding: 1rem 0; margin-bottom: 1rem; }
+.card img { width: 100%; max-height: 220px; object-fit: cover; margin-bottom: .75rem; }
+.title { font-size: 1rem; font-weight: bold; color: #111; text-decoration: none; display: block; margin-bottom: .5rem; }
+.title:hover { text-decoration: underline; }
+.summary { font-size: .85rem; line-height: 1.5; margin-bottom: .75rem; }
+table { width: 100%; font-size: .8rem; border-collapse: collapse; margin-bottom: .5rem; }
+td { padding: 3px 0; vertical-align: top; }
+td.lbl { color: #888; width: 140px; padding-right: 1rem; white-space: nowrap; }
+.links { font-size: .78rem; margin-top: .5rem; }
+.links a { color: #111; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.section-title { font-size: .7rem; color: #aaa; text-transform: uppercase; letter-spacing: .05em; margin: .5rem 0 .2rem; }
+</style>
+</head><body>
+
+<h1>Weekly articles — Week {{ week }}</h1>
+<p class="meta">{{ date }} · {{ articles|length }} articles</p>
+
+{% for a in articles %}
+<div class="card">
+  {% if a.image %}<img src="{{ a.image }}" onerror="this.style.display='none'">{% endif %}
+
+  <a href="{{ a.link }}" target="_blank" class="title">{{ a.title }}</a>
+  <p class="summary">{{ a.summary }}</p>
+
+  <table>
+    <tr><td class="lbl">Type</td><td>{{ a.type or "—" }}</td></tr>
+    <tr><td class="lbl">Field</td><td>{{ a.field or "—" }}</td></tr>
+    <tr><td class="lbl">Doctoral</td><td>{{ a.doctoral }}</td></tr>
+    <tr><td class="lbl">Date</td><td>{{ a.date_str or "—" }}</td></tr>
+    <tr><td class="lbl">Location</td><td>{{ a.location_mode }}{% if a.location_place %} · {{ a.location_place }}{% endif %}</td></tr>
+    <tr><td class="lbl">Application</td><td>{{ a.application_required }}{% if a.application_deadline %} · deadline: {{ a.application_deadline }}{% endif %}{% if a.application_link %} · <a href="{{ a.application_link }}">link</a>{% endif %}</td></tr>
+  </table>
+
+  {% if a.pdf_links %}
+  <div class="links">
+    <div class="section-title">PDFs</div>
+    {% for l in a.pdf_links %}<a href="{{ l }}" target="_blank">{{ l }}</a>{% endfor %}
+  </div>
+  {% endif %}
+
+  {% if a.mailto_links %}
+  <div class="links">
+    <div class="section-title">Contacts</div>
+    {% for l in a.mailto_links %}<a href="{{ l }}">{{ l }}</a>{% endfor %}
+  </div>
+  {% endif %}
+
+  {% if a.all_links %}
+  <div class="links">
+    <div class="section-title">All links</div>
+    {% for l in a.all_links %}<a href="{{ l }}" target="_blank">{{ l }}</a>{% endfor %}
+  </div>
+  {% endif %}
+</div>
+{% endfor %}
+
+</body></html>
