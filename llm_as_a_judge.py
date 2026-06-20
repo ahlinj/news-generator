@@ -2,6 +2,23 @@ import json
 from parse_t4eu import extract_content as extract_content_t4eu
 from parse_upr import extract_content as extract_content_upr
 
+
+def build_user_prompt(article_text, extracted):
+    extracted_payload = {
+        "title": extracted.get("title"),
+        "summary": extracted.get("summary"),
+        "suitable_for_doctoral_students": extracted.get("suitable_for_doctoral_students"),
+        "field": extracted.get("field"),
+        "type": extracted.get("type"),
+        "application": extracted.get("application"),
+        "date_time": extracted.get("date_time"),
+        "location": extracted.get("location"),
+    }
+    return (
+        f"ARTICLE TEXT:\n\"\"\"\n{article_text}\n\"\"\"\n\n"
+        f"EXTRACTED FIELDS (to evaluate):\n{json.dumps(extracted_payload, ensure_ascii=False, indent=2)}\n"
+    )
+
 def load_jsonl(path):
     records = []
     with open(path, "r", encoding="utf-8") as fh:
@@ -24,6 +41,10 @@ if __name__ == "__main__":
 
     for i in range(n):
         try:
-            print(f"{i}: {extract_content(soup_records[i]['link'])[:10]}")
+            prompt = build_user_prompt(
+                article_text=extract_content(soup_records[i]["link"]),
+                extracted=llm_records[i]
+            )
+            print(prompt)
         except Exception as e:
             print(f"Error occurred while processing record {i}: {e}")
