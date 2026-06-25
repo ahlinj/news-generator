@@ -1,6 +1,14 @@
 import json
+import os
+import requests
+
+from dotenv import load_dotenv
+from tqdm import tqdm
 from parse_t4eu import extract_content as extract_content_t4eu
 from parse_upr import extract_content as extract_content_upr
+
+load_dotenv()
+token = os.getenv("BEARER_TOKEN")
 
 JUDGE_SYSTEM_PROMPT = """You are a evaluation judge for a automated newsletter generation. You will be given the text of a source article and a set of fields that a LLM extracted from that article. For EACH field below, decide whether the extracted value is factually correct and faithful to the article.
  
@@ -44,6 +52,41 @@ def build_user_prompt(article_text, extracted):
         f"EXTRACTED FIELDS (to evaluate):\n{json.dumps(extracted_payload, ensure_ascii=False, indent=2)}\n"
     )
 
+def call_judge(article_text, extracted):
+    user_prompt = build_user_prompt(article_text, extracted)
+
+    url = "http://hivecore.famnit.upr.si:6666/api/chat"
+ 
+    payload = {
+        "model": "hf.co/unsloth/Qwen3-30B-A3B-Instruct-2507-GGUF:UD-Q4_K_XL",
+        "stream": False,
+        "temperature": 0.1,
+        "messages": [
+            {"role": "system", "content": JUDGE_SYSTEM_PROMPT},
+            {"role": "user", "content": user_prompt},
+        ],
+    }
+    
+    headers = {
+    "Authorization": f"Bearer {token}"
+    }
+ 
+    response = requests.post(
+        url,
+        json=payload,
+        headers=headers
+    )
+
+    try:
+        return response.json()
+    except Exception:
+        return {
+            "message": {
+                "content": json.dumps("null_response")
+            }
+        }
+
+ 
 def load_jsonl(path):
     records = []
     with open(path, "r", encoding="utf-8") as fh:
@@ -64,12 +107,21 @@ if __name__ == "__main__":
     soup_records = load_jsonl("data/extracted_soup_links_filtered_and_img_5_no_404s.jsonl")
     n = len(llm_records)
 
-    for i in range(n):
-        try:
-            prompt = build_user_prompt(
-                article_text=extract_content(soup_records[i]["link"]),
-                extracted=llm_records[i]
-            )
-            print(prompt)
-        except Exception as e:
-            print(f"Error occurred while processing record {i}: {e}")
+    with open("data/judge_results_1.jsonl", "w", encoding="utf-8") as out_f:
+            for i in tqdm(range(n), desc="Judging records"):
+                try:
+                    result = call_judge(
+                        article_text=extract_content(soup_records[i]["link"]),
+                        extracted=llm_records[i]
+                    )
+
+                    record = {
+                        "index": i,
+                        "link": soup_records[i]["link"],
+                        "judge_response": result["message"]["content"],
+                    }
+                    out_f.write(json.dumps(record, ensure_ascii=False) + "\n")
+                    out_f.flush()
+
+                except Exception as e:
+                    print(f"Error occurred while processing record {i}: {e}")
