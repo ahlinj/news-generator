@@ -107,7 +107,7 @@ def call_llm(url):
         "mailto_links": None
     }
 
-    url = "http://hivecore.famnit.upr.si:6666/api/chat"
+    url_hivecore = "http://hivecore.famnit.upr.si:6666/api/chat"
 
     system_prompt = f"""
         You are an information extraction system. Always return ONLY valid JSON. Do not include explanations or text outside JSON. Use the exact schema provided.
@@ -182,13 +182,20 @@ def call_llm(url):
     "Authorization": f"Bearer {token}"
     }
     
-    response = requests.post(
-        url,
-        json=payload,
-        headers=headers
-    )
     try:
+        response = requests.post(
+            url_hivecore,
+            json=payload,
+            headers=headers,
+            timeout=360
+        )
         return response.json()
+    except requests.exceptions.Timeout:
+        return {
+            "message": {
+                "content": json.dumps(timeout_response)
+            }
+        }
     except Exception:
         return {
             "message": {

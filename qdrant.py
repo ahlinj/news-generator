@@ -103,6 +103,11 @@ def process_weekly_llm():
 
     for article in full_articles:
         extracted = analysis.call_llm(article["link"])
+
+        if isinstance(extracted, Exception):
+            print(f"[error] skipping {article['link']}: {extracted}", flush=True)
+            continue
+
         extracted_data = analysis.extract_json(extracted)
         
         client.set_payload(
