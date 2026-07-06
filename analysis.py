@@ -190,12 +190,8 @@ def call_llm(url):
             timeout=360
         )
         return response.json()
-    except requests.exceptions.Timeout:
-        return {
-            "message": {
-                "content": json.dumps(timeout_response)
-            }
-        }
+    except requests.exceptions.Timeout as e:
+        return e
     except Exception:
         return {
             "message": {
