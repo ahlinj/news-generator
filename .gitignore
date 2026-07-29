@@ -5,6 +5,7 @@ llm_instructions_history.txt
 soup_diff.txt
 stats.txt
 weekly_jsonls
+subscribers.json
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

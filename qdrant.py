@@ -13,6 +13,7 @@ import uuid
 import parse_t4eu
 import parse_upr
 import analysis
+import telegram_bot
 
 _env = Environment(loader=FileSystemLoader(Path(__file__).parent))
 
@@ -26,8 +27,6 @@ BASE_WEEKLY_COLLECTION_NAME = "weekly_news_articles_"
 VECTOR_SIZE = 384
 
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-TELEGRAM_CHAT_ID_1 = os.getenv("TELEGRAM_CHAT_ID_1")
-TELEGRAM_CHAT_ID_2 = os.getenv("TELEGRAM_CHAT_ID_2")
 
 def update_weekly_collection():
     week_number = datetime.now().isocalendar()[1]
@@ -89,20 +88,14 @@ def insert_article(article, names, last_flag):
 
 def send_telegram_file(file_path: str, caption: str):
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendDocument"
-    
-    with open(file_path, "rb") as f:
-        requests.post(
-            url,
-            data={"chat_id": TELEGRAM_CHAT_ID_1, "caption": caption},
-            files={"document": f}
-        )
 
-    with open(file_path, "rb") as f:
-        requests.post(
-            url,
-            data={"chat_id": TELEGRAM_CHAT_ID_2, "caption": caption},
-            files={"document": f}
-        )
+    for chat_id in telegram_bot.load_subscribers():
+        with open(file_path, "rb") as f:
+            requests.post(
+                url,
+                data={"chat_id": chat_id, "caption": caption},
+                files={"document": f}
+            )
 
 def process_weekly_llm():
     points = analysis.fetch_all_points(WEEKLY_COLLECTION_NAME)
