@@ -26,7 +26,8 @@ BASE_WEEKLY_COLLECTION_NAME = "weekly_news_articles_"
 VECTOR_SIZE = 384
 
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
+TELEGRAM_CHAT_ID_1 = os.getenv("TELEGRAM_CHAT_ID_1")
+TELEGRAM_CHAT_ID_2 = os.getenv("TELEGRAM_CHAT_ID_2")
 
 def update_weekly_collection():
     week_number = datetime.now().isocalendar()[1]
@@ -92,7 +93,14 @@ def send_telegram_file(file_path: str, caption: str):
     with open(file_path, "rb") as f:
         requests.post(
             url,
-            data={"chat_id": TELEGRAM_CHAT_ID, "caption": caption},
+            data={"chat_id": TELEGRAM_CHAT_ID_1, "caption": caption},
+            files={"document": f}
+        )
+
+    with open(file_path, "rb") as f:
+        requests.post(
+            url,
+            data={"chat_id": TELEGRAM_CHAT_ID_2, "caption": caption},
             files={"document": f}
         )
 
