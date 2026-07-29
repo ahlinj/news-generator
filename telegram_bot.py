@@ -3,9 +3,6 @@ from telegram.ext import Application, CommandHandler, ContextTypes
 import json
 from pathlib import Path
 import os
-from dotenv import load_dotenv
-
-load_dotenv()
 
 SUBSCRIBERS_FILE = Path("subscribers.json")
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
