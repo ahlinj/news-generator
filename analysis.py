@@ -163,7 +163,7 @@ def call_llm(url):
     """
 
     payload = {
-            "model": "hf.co/unsloth/Qwen3-30B-A3B-Instruct-2507-GGUF:UD-Q4_K_XL",
+            "model": "gemma4:31b",
             "stream": False,
             "temperature": 0.1,
             "messages": [
